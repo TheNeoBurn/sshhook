@@ -2,7 +2,20 @@
 
 Configure linux machine to register a port on a remote server to be accessable via SSH
 
-## Scenario
+- [Scenario](#Scenario)
+- [Prepare the remote server](#PrepareRS)
+  - [SSH machine: Create certificate](#SSHCreateCert)
+  - [Remote server: Create user](#RSCreateUser)
+  - [Remote server: Create command jail script](#RSCreateJail)
+  - [Remote server: Configure SSH access for user](#RSConfigSSH)
+- [Configure the SSH machine](#ConfigSSH)
+  - [SSH machine: Create main task script](#SSHCreateMain)
+  - [SSH machine: Register as daemon](#SSHRegisterDaemon)
+  - [SSH machine: Create and configure a remote user](#SSHRemoteUser)
+- [Connect for the client](#Connect)
+  - [Client: Establish SSH connection through hop](#ClientConnect)
+
+## <a name='Scenario'></a>Scenario
 
 I have a linux machine I need to administer remotely but it is behind a non-accessable-to-me firewall and even then only accessable via IPv6.
 
@@ -18,13 +31,13 @@ To make descriptions easier, I'll use these names:
 - `clinet`: The machine I want to administer the SSH machine from
 
 
-## Prepare the remote server
+## <a name='PrepareRS'></a>Prepare the remote server
 
 As I want the automate the port forwarding, the SSH machine needs a user on the remote machine an a way to access it via a certificate.
 
 You'll need root rights to do all this, so be carefull! You can use `su` or `sudo -s` to change to root or prefix any commands with `sudo ...`.
 
-### SSH machine: Create certificate
+### <a name='SSHCreateCert'></a>SSH machine: Create certificate
 
 Hop onto your **SSH machine** and create a certificate as the user `root` with
 
@@ -38,7 +51,7 @@ Choose a fitting filename (e.g. `/root/.ssh/sshhook`) and **do not set a passphr
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQ...P6U58= root@sshmachine
 ```
 
-### Remote server: Create user
+### <a name='RSCreateUser'></a>Remote server: Create user
 
 Then, connect to your **remote server** and create a user for the incomming ssh to forward the port (e.g. `sshhook`) as root:
 
@@ -48,13 +61,13 @@ adduser sshhook
 
 Set a **strong** random password - you won't need to type it in the future, although it might be required to log in at least once.
 
-### Remote server: Create command jail script
+### <a name='RSCreateJail'></a>Remote server: Create command jail script
 
 To add extra security we will create a simple script which is executed the client connects to prohibit any other commands or a shell to be used. The script can be anything but **it must not exit on its own***! I created the script `/home/sshhook/okay.sh`:
 
 ```sh
 #! /bin/sh
-echo Okay.
+echo Okay
 while true
 do
   sleep 1
@@ -68,7 +81,7 @@ chmod +x /home/sshhook/okay.sh
 chown sshhook:sshhook /home/sshhook/okay.sh
 ```
 
-### Remote server: Configure SSH access for user
+### <a name='RSConfigSSH'></a>Remote server: Configure SSH access for user
 
 Edit the file `/home/sshhook/.ssh/authorized_keys` (you might need to create the directory and/or the file) and make sure it has the correct ownership and access rights:
 
@@ -102,9 +115,11 @@ systemctl restart sshd
 **You might also need to open the port in your firewall (e.g. iptables or ufw).**
 
 
-## Configure the SSH machine
 
-### SSH machine: Create main task script
+
+## <a name='ConfigSSH'></a>Configure the SSH machine
+
+### <a name='SSHCreateMain'></a>SSH machine: Create main task script
 
 Connect to your SSH machine and create the main task script `/opt/sshhook.sh`:
 
@@ -147,7 +162,7 @@ At this time you should test your connection - especially becase it will ask you
 You can close everything by quickly pressing [Ctrl]+[C] repeatedly as it will automatically reconnect otherwise.
 
 
-### SSH machine: Register as daemon
+### <a name='SSHRegisterDaemon'></a>SSH machine: Register as daemon
 
 To make the process automatic I register a systemd daemon. Create the file `/etc/systemd/system/sshhook.service`:
 
@@ -199,15 +214,15 @@ Jun 31 09:50:41 bjsbck sshhook.sh[525]: Pseudo-terminal will not be allocated be
 Jun 31 09:50:43 bjsbck sshhook.sh[525]: Okay
 ```
 
-### SSH machine: Create and configure a remote user
+### <a name='SSHRemoteUser'></a>SSH machine: Create and configure a remote user
 
 As you set everything up I'm sure you already have an SSH user on the machine so let's just say:
 - You'll need sshd running (with this example on the default port 22)
 - You'll need a user allowed to access the SSH machine via SSH
 
-## Connect for the client
+## <a name='Connect'></a>Connect for the client
 
-### Client: Establish SSH connection through hop
+### <a name='ClientConnect'></a>Client: Establish SSH connection through hop
 
 Connecting to your SSH machine through the remote server is strait forward now:
 

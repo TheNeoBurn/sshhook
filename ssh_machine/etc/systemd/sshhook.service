@@ -1,0 +1,13 @@
+[Unit]
+Description=SSH Hook
+After=network.target
+
+[Service]
+Type=simple
+User=root
+#ExecStart=/bin/screen -S sshhook -d -m /opt/sshhook.sh
+ExecStart=/opt/sshhook.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
